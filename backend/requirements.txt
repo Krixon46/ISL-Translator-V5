@@ -4,6 +4,6 @@ torch
 fastapi
 uvicorn[standard]
 websockets
-numpy
+numpy>=2.0.0
 scikit-learn
 joblib

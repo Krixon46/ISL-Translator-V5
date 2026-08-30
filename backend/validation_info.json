@@ -1,0 +1,7 @@
+{
+    "train_samples": 152,
+    "validation_samples": 38,
+    "train_accuracy": 1.0,
+    "validation_accuracy": 1.0,
+    "average_validation_confidence": 0.97
+}

@@ -39,8 +39,11 @@ function getBackendWsUrl() {
   if (!rawUrl) {
     if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
       rawUrl = "ws://127.0.0.1:10000";
+    } else if (typeof window !== "undefined") {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      rawUrl = `${protocol}//${window.location.host}`;
     } else {
-      rawUrl = "wss://isl-translator-v2.onrender.com";
+      rawUrl = "ws://127.0.0.1:10000";
     }
   }
 
@@ -128,7 +131,7 @@ export default function App() {
   const [wsConnected, setWsConnected] = useState(false);
   const [handsDetected, setHandsDetected] = useState(0);
   const [frameCount, setFrameCount] = useState(0);
-  const [requiredFrames, setRequiredFrames] = useState(20);
+  const [requiredFrames, setRequiredFrames] = useState(32);
   const [prediction, setPrediction] = useState("");
   const [confidence, setConfidence] = useState(0);
   const [statusText, setStatusText] = useState("Standby");
@@ -599,7 +602,7 @@ export default function App() {
 
           {/* Guidance */}
           <div className="info-callout">
-            💡 <strong>Quick Tip:</strong> Face the camera in good lighting. Perform a sign and hold it for ~1 second (20 frames). Lowering your hands automatically resets the sequence buffer.
+            💡 <strong>Quick Tip:</strong> Face the camera in good lighting. Perform a sign and hold it for ~1 second (32 frames). Lowering your hands automatically resets the sequence buffer.
           </div>
         </section>
       </main>

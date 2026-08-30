@@ -1,0 +1,16 @@
+{
+    "model_version": "V5",
+    "architecture": "SignBiLSTM_V5",
+    "input_size": 126,
+    "sequence_length": 32,
+    "hidden_size": 128,
+    "num_layers": 2,
+    "bidirectional": true,
+    "dropout": 0.3,
+    "fc_hidden_size": 64,
+    "num_classes": 9,
+    "feature_type": "wrist_relative_position",
+    "hands": 2,
+    "landmarks_per_hand": 21,
+    "coordinates_per_landmark": 3
+}

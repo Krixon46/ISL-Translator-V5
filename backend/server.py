@@ -1,4 +1,5 @@
 import json
+import os
 from collections import deque
 from pathlib import Path
 
@@ -10,7 +11,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from features import landmarks_to_features
-from model import SignBiLSTM
+from model import SignBiLSTM_V5
 
 
 # ============================================================
@@ -19,16 +20,21 @@ from model import SignBiLSTM
 
 BASE_DIR = Path(__file__).parent
 
-MODEL_PATH = BASE_DIR / "best_model.pt"
+# Load best_model_v5.pt if available, fallback to best_model.pt
+if (BASE_DIR / "best_model_v5.pt").exists():
+    MODEL_PATH = BASE_DIR / "best_model_v5.pt"
+else:
+    MODEL_PATH = BASE_DIR / "best_model.pt"
+
 LABELS_PATH = BASE_DIR / "labels.json"
 SCALER_PATH = BASE_DIR / "scaler.pkl"
 
 
 # ============================================================
-# CONFIG
+# CONFIG (V5 MODEL SPECIFICATION)
 # ============================================================
 
-SEQUENCE_LENGTH = 20
+SEQUENCE_LENGTH = 32
 
 CONFIDENCE_THRESHOLD = 0.60
 STABLE_CONFIDENCE = 0.65
@@ -79,7 +85,7 @@ print("Using device:", device)
 
 
 # ============================================================
-# LOAD MODEL
+# LOAD MODEL (SignBiLSTM_V5)
 # ============================================================
 
 if not MODEL_PATH.exists():
@@ -97,10 +103,12 @@ state_dict = torch.load(
 # CREATE MODEL
 # ============================================================
 
-model = SignBiLSTM(
+model = SignBiLSTM_V5(
     input_size=126,
     hidden_size=128,
     num_layers=2,
+    dropout=0.3,
+    fc_hidden_size=64,
     num_classes=len(LABELS)
 )
 
@@ -110,7 +118,7 @@ model.eval()
 
 print()
 print("==============================")
-print("MODEL LOAD SUCCESS")
+print("V5 MODEL LOAD SUCCESS")
 print("==============================")
 print("Parameters:", sum(p.numel() for p in model.parameters()))
 print("Input features: 126")
@@ -125,20 +133,42 @@ print()
 # FASTAPI
 # ============================================================
 
-app = FastAPI()
+app = FastAPI(title="ISL Translator V5 API")
+
+# Allow origins dynamically from environment or default to local + wildcard
+cors_env = os.environ.get("CORS_ORIGINS", "")
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+if cors_env:
+    allowed_origins.extend([origin.strip() for origin in cors_env.split(",") if origin.strip()])
+else:
+    allowed_origins.append("*")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://isl-translator-v2-pink.vercel.app",
-        "*",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/")
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy",
+        "model_version": "V5",
+        "sequence_length": SEQUENCE_LENGTH,
+        "features_per_frame": 126,
+        "classes": LABELS,
+        "num_classes": len(LABELS)
+    }
+
 
 
 # ============================================================
