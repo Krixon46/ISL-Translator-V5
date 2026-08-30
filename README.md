@@ -1,377 +1,193 @@
-# ISL-Translator
+# ISL Translator
 
-A real-time **Indian Sign Language (ISL) Translator** that uses computer vision and deep learning to recognize sign-language gestures from a camera feed and convert them into text.
+An Indian Sign Language (ISL) translator that uses computer vision and a deep-learning model to recognize selected ISL signs from a live webcam feed and convert them into text.
 
-The system uses **MediaPipe** for hand-landmark extraction and a **BiLSTM with Temporal Attention** trained on ISL gesture sequences for classification.
+## Live Demo
 
----
+**Demo Link:** https://isl-translator-v5.vercel.app/
 
-## Live Deployment
 
-**Frontend:** Vercel
-**Backend:** Render
+## Important Notice
 
-> Add your actual deployed URLs here.
+**PLEASE WAIT FOR THE APPLICATION TO CONNECT TO THE BACKEND. IT MAY TAKE SOME TIME BEFORE THE CAMERA CONNECTS AND SIGN DETECTION STARTS.**
 
-* Frontend: `YOUR_VERCEL_URL`
-* Backend: `YOUR_RENDER_URL`
+**THE BACKEND IS CURRENTLY HOSTED ON A FREE RENDER INSTANCE AND MAY BE SLOW, ESPECIALLY WHEN IT IS STARTING UP AFTER A PERIOD OF INACTIVITY.**
 
----
+**IF THE APPLICATION DOES NOT DETECT SIGNS IMMEDIATELY, WAIT FOR THE BACKEND CONNECTION AND MODEL INITIALIZATION TO COMPLETE BEFORE TRYING AGAIN.**
 
-##  Features
+## Features
 
-*  Real-time camera-based sign recognition
-*  Two-hand landmark tracking
-*  BiLSTM-based temporal sequence classification
-*  Temporal Attention for focusing on important frames
-*  126 features extracted per frame
-*  32-frame temporal input sequences
-*  Confidence score for predictions
-*  WebSocket-based real-time communication
-*  Separate frontend and backend deployment
-*  Production-ready trained V5 inference model
+* Real-time Indian Sign Language recognition using a webcam
+* Hand landmark extraction using MediaPipe
+* Deep-learning based temporal sign classification
+* Recognition of 9 ISL greeting signs
+* 32-frame temporal sequence processing
+* 126-feature input representation
+* BiLSTM-based sequence modeling
+* Temporal attention mechanism
+* Confidence score for predictions
+* React-based frontend
+* Python/FastAPI backend
 
----
+## Supported Signs
 
-##  System Architecture
+The current model recognizes the following 9 signs:
 
-```text
-                    ┌─────────────────────┐
-                    │     User Camera     │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │     React / Vite    │
-                    │      Frontend       │
-                    └──────────┬──────────┘
-                               │
-                         WebSocket
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │      FastAPI        │
-                    │       Backend       │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │      MediaPipe      │
-                    │   Hand Landmarks    │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │ Feature Extraction  │
-                    │ 126 features/frame  │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │    StandardScaler   │
-                    │ Applied exactly once│
-                    └──────────┬──────────┘
-                               │
-                         32 × 126
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │   SignBiLSTM_V5     │
-                    │ + Temporal Attention│
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │   9 ISL Classes     │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │ Predicted Text +    │
-                    │ Confidence           │
-                    └─────────────────────┘
-```
+1. HELLO
+2. HOW_ARE_YOU
+3. ALRIGHT
+4. GOOD_MORNING
+5. GOOD_AFTERNOON
+6. GOOD_EVENING
+7. GOOD_NIGHT
+8. THANK_YOU
+9. PLEASED
 
----
-
-##  Machine Learning Model
+## Machine Learning Model
 
 The current production model is **V5 — SignBiLSTM_V5**.
-
-### Model Architecture
-
-```text
-Input
-32 frames × 126 features
-        │
-        ▼
-2-Layer Bidirectional LSTM
-Hidden Size = 128
-        │
-        ▼
-256-dimensional temporal representation
-        │
-        ▼
-Temporal Attention
-256 → 64 → 1
-        │
-        ▼
-Weighted temporal context
-        │
-        ▼
-Fully Connected Layer
-256 → 64
-        │
-        ▼
-ReLU
-        │
-        ▼
-Dropout = 0.3
-        │
-        ▼
-Output Layer
-64 → 9
-```
 
 ### Model Configuration
 
 | Parameter                |                   Value |
 | ------------------------ | ----------------------: |
-| Model                    |           SignBiLSTM_V5 |
-| Input features           |                     126 |
-| Sequence length          |                      32 |
-| Hidden size              |                     128 |
-| LSTM layers              |                       2 |
+| Architecture             |           SignBiLSTM_V5 |
+| Input Size               |                     126 |
+| Sequence Length          |                      32 |
+| Hidden Size              |                     128 |
+| LSTM Layers              |                       2 |
 | Bidirectional            |                     Yes |
-| LSTM dropout             |                     0.3 |
-| Attention hidden size    |                      64 |
-| FC hidden size           |                      64 |
-| Number of classes        |                       9 |
+| Dropout                  |                     0.3 |
+| FC Hidden Size           |                      64 |
+| Number of Classes        |                       9 |
 | Hands                    |                       2 |
-| Landmarks per hand       |                      21 |
-| Coordinates per landmark |                       3 |
-| Feature representation   | Wrist-relative position |
+| Landmarks per Hand       |                      21 |
+| Coordinates per Landmark |                       3 |
+| Feature Type             | Wrist-relative position |
+| Temporal Attention       |                     Yes |
 
----
+The model processes a sequence of **32 frames**, with **126 features per frame**.
 
-##  Feature Extraction
+The 126 features correspond to:
 
-Each video frame is processed using MediaPipe.
+`2 hands × 21 landmarks × 3 coordinates = 126 features`
 
-For each detected hand:
+The model uses a bidirectional LSTM followed by temporal attention to learn which frames are most important for identifying a sign.
 
-```text
-21 landmarks
-×
-3 coordinates (X, Y, Z)
-=
-63 features
-```
+## Machine Learning Performance
 
-For two hands:
+The V5 model achieved:
 
-```text
-63 × 2 = 126 features/frame
-```
+* **Validation Accuracy: 100%**
+* Validation samples: 38
+* Correct predictions: 38/38
+* Average validation confidence: 0.9700
 
-The model therefore receives:
+The exported deployment package was also verified against the original trained model.
 
-```text
-32 frames × 126 features
-```
+The final deployment preprocessing pipeline was tested to ensure that raw landmark data is transformed into the same standardized input used during training.
 
-For inference, the final PyTorch tensor is:
-
-```text
-(1, 32, 126)
-```
-
-where `1` represents the batch dimension.
-
----
-
-##  Inference Pipeline
-
-The production inference pipeline is:
-
-```text
-Camera Frame
-     ↓
-MediaPipe Hand Detection
-     ↓
-21 landmarks per hand
-     ↓
-Wrist-relative feature extraction
-     ↓
-126 features/frame
-     ↓
-Collect 32 frames
-     ↓
-32 × 126 sequence
-     ↓
-V5 StandardScaler
-     ↓
-PyTorch Tensor
-     ↓
-(1, 32, 126)
-     ↓
-SignBiLSTM_V5
-     ↓
-Temporal Attention
-     ↓
-9-class prediction
-     ↓
-Label + Confidence
-```
-
-### Important
-
-The V5 `StandardScaler` is applied **exactly once** to the raw feature sequence.
-
-Double-scaling the already standardized input must be avoided because it changes the distribution expected by the trained model.
-
----
-
-##  Supported Signs
-
-The current model recognizes 9 ISL greeting/sign classes:
-
-```text
-HELLO
-HOW_ARE_YOU
-ALRIGHT
-GOOD_MORNING
-GOOD_AFTERNOON
-GOOD_EVENING
-GOOD_NIGHT
-THANK_YOU
-PLEASED
-```
-
-The label indices are fixed:
-
-| Index | Label          |
-| ----: | -------------- |
-|     0 | HELLO          |
-|     1 | HOW_ARE_YOU    |
-|     2 | ALRIGHT        |
-|     3 | GOOD_MORNING   |
-|     4 | GOOD_AFTERNOON |
-|     5 | GOOD_EVENING   |
-|     6 | GOOD_NIGHT     |
-|     7 | THANK_YOU      |
-|     8 | PLEASED        |
-
----
-
-##  Model Validation
-
-The V5 model achieved the following result on its held-out validation set:
-
-```text
-Validation samples: 38
-Correct predictions: 38
-Validation accuracy: 100%
-```
-
-The model was also checked after exporting the deployment package.
-
-The exported model, scaler, labels, and configuration were verified against the original trained model.
-
-The deployment preprocessing pipeline was additionally verified to reproduce the standardized model input.
-
-> **Note:** The 100% validation accuracy is based on the available validation dataset and should not be interpreted as 100% real-world recognition accuracy. Performance on unseen users, cameras, backgrounds, lighting conditions, signing styles, and genuinely unseen videos may differ.
-
----
-
-##  Tech Stack
+## Technology Stack
 
 ### Frontend
 
 * React
 * Vite
 * JavaScript
-* WebSocket
+* Web Camera API
 
 ### Backend
 
 * Python
 * FastAPI
 * Uvicorn
-* WebSocket
-* PyTorch
 * MediaPipe
+* PyTorch
 * NumPy
-* scikit-learn
+* Scikit-learn
 
 ### Machine Learning
 
 * BiLSTM
 * Temporal Attention
 * StandardScaler
-* Sequence-based classification
+* MediaPipe hand landmarks
 
 ### Deployment
 
-* GitHub
-* Vercel — Frontend
-* Render — Backend
+* Frontend: Vercel
+* Backend: Render
+* Source Code: GitHub
 
----
-
-##  Project Structure
+## System Pipeline
 
 ```text
-ISL-Translator/
-│
-├── frontend/
-│   ├── src/
-│   ├── public/
-│   ├── package.json
-│   └── ...
-│
-├── backend/
-│   ├── assets/
-│   │   └── hand_landmarker.task
-│   │
-│   ├── model/
-│   │   └── ...
-│   │
-│   ├── best_model.pt
-│   ├── labels.json
-│   ├── model_config.json
-│   ├── scaler.pkl
-│   ├── server.py
-│   └── ...
-│
-├── README.md
-└── ...
+Webcam
+   |
+   v
+Frontend
+   |
+   v
+Video Frames
+   |
+   v
+Backend
+   |
+   v
+MediaPipe Hand Landmark Detection
+   |
+   v
+126 Features per Frame
+   |
+   v
+32-Frame Sequence
+   |
+   v
+StandardScaler
+   |
+   v
+SignBiLSTM_V5
+   |
+   v
+Temporal Attention
+   |
+   v
+9-Class Prediction
+   |
+   v
+Detected ISL Sign
 ```
 
-> The exact directory structure may vary depending on the deployment configuration.
+## Current Limitations
 
----
+* The current model supports only 9 signs.
+* Recognition requires a sequence of 32 frames.
+* Detection performance depends on webcam quality, lighting, hand visibility, and signing style.
+* The backend is currently hosted using a free Render instance and can have noticeable startup latency.
+* Because the backend is not continuously running on the free hosting tier, the first request may take longer than subsequent requests.
+* The current model has been validated primarily on the available dataset and may not perform identically on completely unseen users, backgrounds, camera positions, or signing styles.
 
-##  Local Development
+## Running Locally
 
-### 1. Clone the repository
+### Frontend
 
 ```bash
-git clone YOUR_GITHUB_REPOSITORY_URL
-cd ISL-Translator
+cd frontend
+npm install
+npm run dev
 ```
 
-### 2. Backend Setup
+### Backend
 
-Create a virtual environment:
+Create and activate a Python virtual environment:
 
 ```bash
 python -m venv .venv
 ```
 
-Activate it on Windows:
+Windows:
 
-```powershell
+```bash
 .venv\Scripts\activate
 ```
 
@@ -387,166 +203,54 @@ Start the backend:
 python -m uvicorn server:app --reload
 ```
 
-The backend will normally run at:
+The frontend and backend configuration should be updated with the appropriate local or production backend URL.
 
-```text
-http://localhost:8000
-```
+## Deployment
 
-### 3. Frontend Setup
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-The Vite development server will normally run at:
-
-```text
-http://localhost:5173
-```
-
-Configure the frontend environment variable to point to the backend.
-
-Example:
-
-```env
-VITE_API_URL=http://localhost:8000
-```
-
-For production, use the deployed Render backend URL instead.
-
----
-
-##  Deployment
-
-The application uses a split deployment architecture.
+The project uses a separate deployment architecture:
 
 ```text
 GitHub
-   │
-   ├──────────────► Vercel
-   │                 Frontend
-   │
-   └──────────────► Render
-                     Backend
+  |
+  +------------------> Vercel
+  |                     |
+  |                     v
+  |                 React Frontend
+  |
+  +------------------> Render
+                        |
+                        v
+                    FastAPI Backend
+                        |
+                        v
+                    V5 ML Model
 ```
 
-### Frontend — Vercel
+The frontend communicates with the deployed FastAPI backend through HTTP/WebSocket requests.
 
-The React/Vite application is deployed on Vercel.
+## Model Files
 
-The frontend communicates with the backend using the configured production backend URL.
-
-### Backend — Render
-
-The FastAPI application is deployed on Render.
-
-The backend contains the trained V5 model and performs:
-
-* MediaPipe processing
-* Feature extraction
-* Sequence construction
-* Feature scaling
-* V5 inference
-* WebSocket communication
-
----
-
-##  Real-Time Communication
-
-The application uses WebSockets for real-time communication between the frontend and backend.
-
-The general flow is:
+The V5 deployment package contains:
 
 ```text
-Browser Camera
-      ↓
-Video Frames
-      ↓
-WebSocket
-      ↓
-FastAPI Backend
-      ↓
-Feature Extraction
-      ↓
-32-frame Sequence
-      ↓
-V5 Inference
-      ↓
-Prediction
-      ↓
-WebSocket
-      ↓
-Frontend
+isl_v5_package/
+├── best_model_v5.pt
+├── labels.json
+├── model_config.json
+├── scaler.pkl
+└── validation_info.json
 ```
 
-For HTTPS production deployments, WebSocket communication uses secure WebSockets:
+These files contain the trained model, class labels, model configuration, preprocessing scaler, and validation information required for inference.
 
-```text
-wss://
-```
+## Future Improvements
 
----
-
-##  Project Goal
-
-The goal of this project is to build a practical real-time Indian Sign Language translation system that can:
-
-1. Capture signs using a standard camera.
-2. Extract meaningful hand landmarks.
-3. Understand temporal movement rather than individual frames.
-4. Classify complete sign sequences.
-5. Return understandable text in real time.
-
-The current implementation focuses on a limited vocabulary of ISL greeting/sign phrases and provides a foundation for expanding the system to a much larger vocabulary.
-
----
-
-##  Future Improvements
-
-Potential future improvements include:
-
-* Expanding the ISL vocabulary
-* Collecting more videos from multiple signers
-* Testing on completely unseen users
-* Improving robustness to different lighting and backgrounds
-* Better continuous-sign segmentation
-* Sentence-level translation
-* Language-model-based sentence correction
-* More advanced temporal architectures
-* Larger and more diverse training datasets
-* Mobile deployment
-* Edge/on-device inference
-
----
-
-##  Current Limitations
-
-The current model recognizes only the 9 trained classes.
-
-It should not be treated as a complete ISL translation system.
-
-Real-world performance can be affected by:
-
-* Lighting
-* Camera angle
-* Hand occlusion
-* Background
-* Distance from camera
-* Signing speed
-* Different signing styles
-* Differences between training and unseen users
-
-The model should therefore be evaluated on genuinely unseen recordings before making claims about real-world accuracy.
-
----
-
-
-
-##  License
-
-Apache License 2.0
-
-if you decide to release the project under MIT.
+* Add more ISL signs
+* Collect more training videos from different users
+* Improve performance on unseen users
+* Optimize backend inference latency
+* Improve WebSocket reliability and responsiveness
+* Add sentence-level sign recognition
+* Improve continuous sign detection
+* Deploy the ML inference service on a faster hosting configuration
+* Expand the dataset to cover a larger ISL vocabulary
