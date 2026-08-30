@@ -454,7 +454,7 @@ The backend contains the trained V5 model and performs:
 
 ---
 
-## 🔌 Real-Time Communication
+##  Real-Time Communication
 
 The application uses WebSockets for real-time communication between the frontend and backend.
 
@@ -543,16 +543,10 @@ The model should therefore be evaluated on genuinely unseen recordings before ma
 
 ---
 
-##  Author
 
-**Krixon**
-
-Computer Science & Engineering
-
----
 
 ##  License
 
-
+Apache License 2.0
 
 if you decide to release the project under MIT.
