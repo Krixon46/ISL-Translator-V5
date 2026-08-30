@@ -39,11 +39,8 @@ function getBackendWsUrl() {
   if (!rawUrl) {
     if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
       rawUrl = "ws://127.0.0.1:10000";
-    } else if (typeof window !== "undefined") {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      rawUrl = `${protocol}//${window.location.host}`;
     } else {
-      rawUrl = "ws://127.0.0.1:10000";
+      rawUrl = "https://isl-translator-v5.onrender.com";
     }
   }
 
@@ -221,6 +218,8 @@ export default function App() {
             };
             ws.send(JSON.stringify(payload));
           } else {
+            // Immediately reset local frame count on client when no hands detected
+            setFrameCount(0);
             const payload = {
               type: "no_hand",
               timestamp: Math.round(now),
@@ -274,10 +273,12 @@ export default function App() {
 
           // Handle server statuses
           if (data.status === "ready" && data.frames === 0) {
+            setFrameCount(0);
             setPrediction("");
             setConfidence(0);
             setStatusText("Ready for signs");
           } else if (data.status === "no_hand") {
+            setFrameCount(0);
             setStatusText("No hands present");
           } else if (data.status === "collecting") {
             setStatusText(`Buffering: ${data.frames}/${data.required}`);
@@ -433,7 +434,7 @@ export default function App() {
       <header className="app-header">
         <div className="brand-badge">
           <span className="badge-dot" />
-          ISL Neural Engine v2
+          ISL Neural Engine v5
         </div>
         <h1 className="app-title">Indian Sign Language Translator</h1>
         <p className="app-subtitle">

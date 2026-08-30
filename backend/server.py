@@ -142,6 +142,8 @@ allowed_origins = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://isl-translator-v5.vercel.app",
+    "https://isl-translator-v5.vercel.app/",
 ]
 if cors_env:
     allowed_origins.extend([origin.strip() for origin in cors_env.split(",") if origin.strip()])
@@ -223,50 +225,28 @@ async def predict(websocket: WebSocket):
             hands = payload.get("hands", [])
 
             # ==================================================
-            # NO HAND
+            # NO HAND / HANDS DOWN
             # ==================================================
             if msg_type == "no_hand" or len(hands) == 0:
                 no_hand_count += 1
 
-                # ----------------------------------------------
-                # HAND RELEASED (5 consecutive frames)
-                # ----------------------------------------------
-                if no_hand_count >= RELEASE_FRAMES_REQUIRED:
-                    if len(sequence) > 0:
-                        print("HAND RELEASED → RESET")
-
-                    # FULL RESET
+                # Reset buffer immediately when hands are dropped
+                if len(sequence) > 0:
+                    print("HANDS DOWN → RESET SEQUENCE BUFFER TO 0")
                     sequence.clear()
                     last_prediction_index = None
                     stable_prediction_count = 0
                     accepted_prediction = None
                     prediction_window_count = 0
 
-                    # Tell frontend explicitly: 0/20
-                    if not await safe_send(
-                        websocket,
-                        {
-                            "status": "ready",
-                            "text": "",
-                            "confidence": 0,
-                            "frames": 0,
-                            "required": SEQUENCE_LENGTH
-                        }
-                    ):
-                        break
-
-                    continue
-
-                # ----------------------------------------------
-                # Temporarily no hand (< 5 frames)
-                # ----------------------------------------------
+                # Notify frontend immediately with frames: 0
                 if not await safe_send(
                     websocket,
                     {
-                        "status": "no_hand",
+                        "status": "ready" if no_hand_count >= 2 else "no_hand",
                         "text": "",
                         "confidence": 0,
-                        "frames": len(sequence),
+                        "frames": 0,
                         "required": SEQUENCE_LENGTH
                     }
                 ):
